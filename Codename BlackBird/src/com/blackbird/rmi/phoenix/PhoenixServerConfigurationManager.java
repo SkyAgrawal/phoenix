@@ -11,4 +11,15 @@ package com.blackbird.rmi.phoenix;
  */
 public class PhoenixServerConfigurationManager {
 
+	
+	
+	/*
+	 * 
+	 * Debug Log File
+	 * Error Log File
+	 * PhoenixConfigMap file name
+	 * 
+	 * 
+	 * 
+	 */
 }

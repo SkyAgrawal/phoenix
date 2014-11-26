@@ -28,7 +28,7 @@ public class PhoenixServiceLoader {
 		super();
 
 		if (PhoenixServiceLoader.dirtyMap) {
-			PhoenixServerLogger.log("sericeMap is dirty.");
+			PhoenixServerLogger.log("serviceMap is dirty.");
 			if (!loadMapfromConfig()) {
 				PhoenixServerLogger
 						.log("Failed to load config into serviceMap");
@@ -39,16 +39,17 @@ public class PhoenixServiceLoader {
 
 			}
 		} else {
-			
+
 			PhoenixServerLogger.log("sericeMap is not dirty.");
-			
+
 		}
-		
-		PhoenixServerLogger.log("Number of configured services "+PhoenixServiceLoader.serviceMap.size());
+
+		PhoenixServerLogger.log("Number of configured services "
+				+ PhoenixServiceLoader.serviceMap.size());
 
 	}
 
-	private boolean loadMapfromConfig() {
+	private static boolean loadMapfromConfig() {
 		boolean loadingIsSuccessfull = false;
 		InputStream input = null;
 		try {
@@ -77,8 +78,9 @@ public class PhoenixServiceLoader {
 				 * TODO : Need to get from configuration
 				 */
 				String filename = "PhoenixConfigMap.properties";
-				input = getClass().getClassLoader().getResourceAsStream(
-						filename);
+				Object o = new Object();
+				input = o.getClass().getClassLoader()
+						.getResourceAsStream(filename);
 
 			} else {
 				input = new FileInputStream(configPath);
@@ -93,7 +95,7 @@ public class PhoenixServiceLoader {
 			}
 
 			serviceProperties.load(input);
-
+			PhoenixServiceLoader.serviceMap.clear();
 			for (Object key : serviceProperties.keySet()) {
 				String serviceName = (String) key;
 				String serviceClass = serviceProperties
@@ -127,6 +129,99 @@ public class PhoenixServiceLoader {
 		}
 
 		return loadingIsSuccessfull;
+	}
+
+	/**
+	 * 
+	 */
+	public static void setDirtyMap() {
+		PhoenixServiceLoader.dirtyMap = true;
+	}
+
+	public static boolean refresh() {
+		PhoenixServerLogger.log("Refreshing Service Map from refresh method");
+		if (PhoenixServiceLoader.dirtyMap) {
+			if(PhoenixServiceLoader.loadMapfromConfig())
+			{
+				
+				PhoenixServerLogger.log("Refreshing Service Map Successfull");
+				PhoenixServiceLoader.dirtyMap = false;
+				PhoenixServerLogger.log("Service Map is no longer dirty");
+				return true;
+				
+			}
+			else
+			{
+				
+				PhoenixServerLogger.error("Refreshing Service Map Failed");
+				PhoenixServiceLoader.setDirtyMap();
+				return false;
+			}
+		}
+		else
+		{
+			
+			PhoenixServerLogger.log("Not doing anything for Refresh as map is not dirty");
+			return true;
+			 
+		}
+		
+	}
+
+	public Class<?> getService(String serviceName) {
+
+		if (serviceName.isEmpty()) {
+			PhoenixServerLogger.log("Service Name is empty");
+			return null;
+		}
+
+		PhoenixServerLogger.log("Service Name is " + serviceName);
+
+		if (PhoenixServiceLoader.serviceMap.size() == 0) {
+			PhoenixServerLogger.log("Service Map is empty. No services found");
+			return null;
+		}
+
+		if (PhoenixServiceLoader.serviceMap.containsKey(serviceName)) {
+			String className = PhoenixServiceLoader.serviceMap.get(serviceName);
+			PhoenixServerLogger.log("Service "+serviceName+" Found");
+			if (className.isEmpty()) {
+				PhoenixServerLogger
+						.error("Class name for service was not found. Service is not properly configured");
+				return null;
+			}
+
+			PhoenixServerLogger.log("Locating " + className);
+			Class<?> serviceClass = null;
+			try {
+				serviceClass = this.getClass().getClassLoader()
+						.loadClass(className);
+				return serviceClass;
+			} catch (ClassNotFoundException e) {
+				e.printStackTrace();
+				PhoenixServerLogger
+						.error("Class Not found Exception. Failed to locate service "+serviceName);
+				return null;
+			}
+		} else {
+			PhoenixServerLogger.log("Service "+serviceName+" Not Found. Trying Again");
+			PhoenixServerLogger.log("Marking Service Map as dirty");
+			PhoenixServiceLoader.setDirtyMap();
+			PhoenixServerLogger.log("Refreshing Service Map");
+			PhoenixServiceLoader.refresh();	
+			if(PhoenixServiceLoader.serviceMap.containsKey(serviceName))
+			{
+				PhoenixServerLogger.log("Service "+serviceName+" Found after refresh");
+				return getService(serviceName);	
+			}
+			else
+			{
+				PhoenixServerLogger.error("Service "+serviceName+" not found");
+				return null;
+			}
+		}
+		
+		
 	}
 
 }

@@ -25,4 +25,11 @@ public class PhoenixServerLogger {
 		//log into file
 		
 	}
+	
+	public static void error(String message)
+	{
+		PhoenixServerLogger.log(message);
+		//log to erro file 
+		
+	}
 }
