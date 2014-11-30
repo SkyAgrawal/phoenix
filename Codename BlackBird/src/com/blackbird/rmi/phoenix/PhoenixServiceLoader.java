@@ -196,11 +196,12 @@ public class PhoenixServiceLoader {
 			try {
 				serviceClass = this.getClass().getClassLoader()
 						.loadClass(className);
+				PhoenixServerLogger.log("Succesfully found " + className);
 				return serviceClass;
 			} catch (ClassNotFoundException e) {
 				e.printStackTrace();
 				PhoenixServerLogger
-						.error("Class Not found Exception. Failed to locate service "+serviceName);
+						.error("Class Not found Exception. Failed to locate service "+className);
 				return null;
 			}
 		} else {
