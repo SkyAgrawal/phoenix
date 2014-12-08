@@ -5,9 +5,11 @@
  */
 package com.blackbird.rmi.phoenix;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -24,14 +26,13 @@ public class PhoenixServiceLoader {
 	/**
 	 * 
 	 */
-	public PhoenixServiceLoader() {
-		super();
-
+	public static void init() {
+		
 		if (PhoenixServiceLoader.dirtyMap) {
 			PhoenixServerLogger.log("serviceMap is dirty.");
 			if (!loadMapfromConfig()) {
 				PhoenixServerLogger
-						.log("Failed to load config into serviceMap");
+						.error("Failed to load services into serviceMap");
 				PhoenixServiceLoader.dirtyMap = true;
 			} else {
 				PhoenixServerLogger.log("sericeMap successfully loaded");
@@ -56,51 +57,13 @@ public class PhoenixServiceLoader {
 
 			Properties serviceProperties = new Properties();
 
-			/*
-			 * 
-			 * First load from System properties AKA JVM argument
-			 * -DPhoenixConfigMapPath If failed to get the path then try from
-			 * class loader If it still fails screw u !!
-			 */
-
-			String configPath = System.getProperty("PhoenixConfigMapPath");
-			if (configPath.isEmpty()) {
-				/*
-				 * 
-				 * Could not get from System propertiees Trying from class path
-				 */
-
-				PhoenixServerLogger
-						.log("Failed to get PhoenixConfigMapPath from system properties. Trying from class path ");
-
-				/*
-				 * 
-				 * TODO : Need to get from configuration
-				 */
-				String filename = "PhoenixConfigMap.properties";
-				Object o = new Object();
-				input = o.getClass().getClassLoader()
-						.getResourceAsStream(filename);
-
-			} else {
-				input = new FileInputStream(configPath);
-			}
-
-			if (null == input) {
-
-				PhoenixServiceLoader.serviceMap.clear();
-				PhoenixServerLogger
-						.log("Failed to obtain service mappings. No service is loaded ");
-				return false;
-			}
-
+			input = new FileInputStream(new File(PhoenixServerConfigurationManager.getConfiguration(PhoenixServerConfigurationConstants.PHOENIX_SERVICE_CONFIG_FILE_PATH)));
 			serviceProperties.load(input);
 			PhoenixServiceLoader.serviceMap.clear();
 			for (Object key : serviceProperties.keySet()) {
 				String serviceName = (String) key;
 				String serviceClass = serviceProperties
 						.getProperty(serviceName);
-
 				if ((!serviceName.isEmpty()) && (!serviceClass.isEmpty())) {
 					PhoenixServerLogger.log("Adding service " + serviceName
 							+ " to service map");
@@ -114,9 +77,11 @@ public class PhoenixServiceLoader {
 
 		} catch (IOException ex) {
 			PhoenixServerLogger
-					.log("Got Exception when loading configuration. Clearing serviceMap");
+					.error("Got Exception when loading configuration. Clearing serviceMap");
+			PhoenixServerLogger.log(ex.getMessage());
 			ex.printStackTrace();
 			PhoenixServiceLoader.serviceMap.clear();
+			PhoenixServiceLoader.setDirtyMap();
 		} finally {
 			if (input != null) {
 				try {
@@ -168,7 +133,7 @@ public class PhoenixServiceLoader {
 		
 	}
 
-	public Class<?> getService(String serviceName) {
+	public static Class<?> getService(String serviceName) {
 
 		if (serviceName.isEmpty()) {
 			PhoenixServerLogger.log("Service Name is empty");
@@ -194,7 +159,7 @@ public class PhoenixServiceLoader {
 			PhoenixServerLogger.log("Locating " + className);
 			Class<?> serviceClass = null;
 			try {
-				serviceClass = this.getClass().getClassLoader()
+				serviceClass = PhoenixServiceLoader.class.getClassLoader()
 						.loadClass(className);
 				PhoenixServerLogger.log("Succesfully found " + className);
 				return serviceClass;
@@ -222,6 +187,49 @@ public class PhoenixServiceLoader {
 			}
 		}
 		
+		
+	}
+	
+	public static void loadJNI()
+	{
+		PhoenixServerLogger.log("In loadJNI()");
+		String JNIconfigurationFilePath = PhoenixServerConfigurationManager.getConfiguration(PhoenixServerConfigurationConstants.JNI_CONFIGURATION_FILE_PATH);
+		PhoenixServerLogger.log("Loading JNI configurations from "+JNIconfigurationFilePath);
+		Properties jniConfigurationPropFile = new Properties();
+		
+		try {
+			FileInputStream jniConfigurationFile = new FileInputStream(new File(JNIconfigurationFilePath));		
+			jniConfigurationPropFile.load(jniConfigurationFile);
+			Enumeration<String> keySet = (Enumeration<String>) jniConfigurationPropFile.propertyNames();
+			
+			while(keySet.hasMoreElements())
+			{				
+				String jniLibName = (String) keySet.nextElement();				
+				String jniLibPath = jniConfigurationPropFile.getProperty(jniLibName);
+				PhoenixServerLogger.log("Adding "+jniLibPath+" to java lib path");
+				PhoenixServiceLoader.addToEnv(jniLibName);
+				PhoenixServerLogger.log("Loading JNI Lib "+jniLibName);
+				System.load(jniLibName);
+			}
+		} catch ( Exception e) {
+			
+			e.printStackTrace();
+			PhoenixServerLogger.error("Failed to load JNI ");
+			PhoenixServerLogger.log(e.getMessage());
+		}
+		
+		PhoenixServerLogger.log("Leaving loadJNI()");
+	}
+
+	/**
+	 * @param jniLibName
+	 */
+	private static void addToEnv(String jniLibName) {
+		PhoenixServerLogger.log("In addToEnv()");
+		
+		
+		
+		PhoenixServerLogger.log("Leaving addToEnv()");
 		
 	}
 

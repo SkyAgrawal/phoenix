@@ -9,14 +9,24 @@ package com.blackbird.rmi.phoenix;
  * @author Aakash
  *
  */
-public final class PhoenixServerConfigurationConstants {
+public  enum PhoenixServerConfigurationConstants {
 
-	static final public String 
-	LOG_FILE_PATH = "debugLogFilePath";
-	
-	
-	static final public String ERROR_LOG_FILE = "";
-	
-	
-	
+	LOG_FILE_PATH ( "logFilePath"),
+	ERROR_LOG_FILE ( "errorLogFilePath"),
+	MAX_NUMBER_LOG_ENTRY ( "maxNumberOfLogEntries"),
+	PHOENIX_SERVICE_CONFIG_FILE_PATH ("phoenixServiceConfigFilePath"),
+	JNI_CONFIGURATION_FILE_PATH ( "jniConfigurationFilePath");
+
+	private final String ConstantValue;
+	PhoenixServerConfigurationConstants(String value)
+	{
+		ConstantValue = value;
+	}
+
+	public String toString(){
+	       return ConstantValue;
+	    }
+
+
+
 }
